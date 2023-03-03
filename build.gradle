@@ -1,0 +1,93 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+    id 'java'
+}
+
+group 'br.com.serasaconsumidor'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    spring = '2.7.5'
+    cucumber = '7.8.1'
+    webDriverManager = '5.3.1'
+    selenium = '4.6.0'
+    lombok = '1.18.24'
+    allure = '2.20.1'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    // Spring Boot
+    implementation "org.springframework.boot:spring-boot-starter-web:$spring"
+    testImplementation "org.springframework.boot:spring-boot-starter-test:$spring"
+
+    // Cucumber + Spring + TestNG
+    testImplementation "io.cucumber:cucumber-java:$cucumber"
+    testImplementation "io.cucumber:cucumber-spring:$cucumber"
+    testImplementation "io.cucumber:cucumber-testng:$cucumber"
+
+    // WebDriver Manager
+    implementation "io.github.bonigarcia:webdrivermanager:$webDriverManager"
+
+    // Selenium
+    implementation "org.seleniumhq.selenium:selenium-java:$selenium"
+    implementation "org.seleniumhq.selenium:selenium-api:$selenium"
+
+    // Lombok
+    implementation "org.projectlombok:lombok:$lombok"
+    annotationProcessor "org.projectlombok:lombok:$lombok"
+    testAnnotationProcessor "org.projectlombok:lombok:$lombok"
+}
+
+tasks.withType(Test) {
+    testLogging {
+        events TestLogEvent.FAILED,
+                TestLogEvent.PASSED,
+                TestLogEvent.SKIPPED
+        exceptionFormat TestExceptionFormat.FULL
+        showExceptions true
+        showCauses true
+        showStackTraces true
+
+        debug {
+            events TestLogEvent.STARTED,
+                    TestLogEvent.FAILED,
+                    TestLogEvent.PASSED,
+                    TestLogEvent.SKIPPED
+            exceptionFormat TestExceptionFormat.FULL
+        }
+
+        info.events = debug.events
+        info.exceptionFormat = debug.exceptionFormat
+
+        afterSuite { desc, result ->
+            if (!desc.parent) { // will match the outermost suite
+                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+                def startItem = '|  ', endItem = '  |'
+                def repeatLength = startItem.length() + output.length() + endItem.length()
+                println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+            }
+        }
+    }
+}
+
+clean {
+    delete 'build'
+}
+
+test {
+    useTestNG()
+    systemProperties(System.properties)
+    scanForTestClasses = false
+
+    finalizedBy(clean)
+}
